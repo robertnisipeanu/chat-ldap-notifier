@@ -1,0 +1,6 @@
+/node_modules/
+/build/
+/secrets/
+/.idea/
+/data/
+.env
