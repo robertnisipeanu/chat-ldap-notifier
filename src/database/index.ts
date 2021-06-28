@@ -25,7 +25,7 @@ export async function createTables(db: Database<sqlite3.Database, sqlite3.Statem
 
     // Create table to store ldap users
     await db.exec('CREATE TABLE IF NOT EXISTS users_ldap (id INTEGER PRIMARY KEY, user_id INTEGER, username VARCHAR(255), ' +
-        'user_principal_name VARCHAR(255), last_logon_time DATETIME, password_expiry_time DATETIME, ' +
+        'user_principal_name VARCHAR(255), last_logon_time DATETIME, password_expiry_time DATETIME, deleted_at DATETIME NULLABLE, ' +
         'UNIQUE(user_id, password_expiry_time))');
 
     // Create table to store notification settings

@@ -36,7 +36,7 @@ export default class UserRepository {
             'LEFT JOIN (SELECT ns.id, ns.ldap_user_id FROM notifications_sent ns JOIN notifications n ON ns.notification_id = n.id WHERE n.send_before <= :date) AS NS ' +
             'ON ns.ldap_user_id = lu.id ' +
             'WHERE lu.password_expiry_time < :current_date + :date ' +
-            'AND ns.id IS NULL',
+            'AND ns.id IS NULL AND lu.deleted_at IS NULL',
             {
                 ':date': date,
                 ':current_date': new Date(),

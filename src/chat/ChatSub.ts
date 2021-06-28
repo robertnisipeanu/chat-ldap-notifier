@@ -7,6 +7,9 @@ import {chat_v1, google} from "googleapis";
 import Chat = chat_v1.Chat;
 import {GoogleAuth} from "google-auth-library/build/src/auth/googleauth";
 import ChatMessage from "./interfaces/ChatMessage";
+import {Database} from "sqlite";
+import UserRepository from "../database/repositories/UserRepository";
+import LdapUserRepository from "../database/repositories/LdapUserRepository";
 
 export default class ChatSub {
     private readonly projectId: string;
@@ -48,39 +51,65 @@ export default class ChatSub {
         // Get subscription
         const subscription = pubsub.subscription(this.subscriptionName);
 
-        subscription.on('message', this.messageHandler.bind(this));
+        subscription.on('message', this.subscriptionHandler.bind(this));
 
         console.log("Listening to chat messages");
     }
 
-    private messageHandler(message: any) {
+    private async subscriptionHandler(message: any) {
         message.ack();
 
         const messageObj = JSON.parse(message.data);
 
-        if (messageObj.type !== "MESSAGE") {
-            console.log("Got unknown message type", messageObj);
+        if (!messageObj.space || !messageObj.space.singleUserBotDm) {
+            console.log(`Got message on a space that is not a DM`, JSON.stringify(messageObj));
             return;
         }
 
-        if (!messageObj.space.singleUserBotDm) {
-            console.log(`Got message on a space that is not a DM: ${messageObj.space.name}`);
-            return;
+        switch (messageObj.type) {
+            case "MESSAGE":
+                this.messageHandler(messageObj);
+                break;
+            case "ADDED_TO_SPACE":
+                await this.addHandler(messageObj);
+                break;
+            case "REMOVED_FROM_SPACE":
+                await this.removeHandler(messageObj);
+                break;
+            default:
+                console.log("Got unknown message type", JSON.stringify(messageObj));
+                break;
         }
+    }
 
-        const parsedArgs = messageObj.message.text.split(" ");
+    private messageHandler(message: any) {
+
+        const parsedArgs = message.message.text.split(" ");
 
         const finalMessage: ChatMessage = {
-            space: messageObj.space.name,
-            sender: messageObj.user,
+            space: message.space.name,
+            sender: message.user,
             command: parsedArgs.shift(),
             args: [...parsedArgs], // Make array copy (in case of multiple listeners),
-            reply: this.sendMessage.bind(this, messageObj.space.name),
+            reply: this.sendMessage.bind(this, message.space.name),
         };
 
         this.getCommandListeners(finalMessage.command).forEach((cmdListener) => {
             cmdListener(finalMessage);
         });
+    }
+
+    private async addHandler(message: any) {
+        await this.sendMessage(message.space.name, "Welcome! To start receiving notifications before your Windows password expires, please type `/register user.name` where `user.name` is your windows username.");
+    }
+
+    private async removeHandler(message: any) {
+        // Check if user exists
+        const user = await UserRepository.getByName(message.user.name);
+        if (!user || !user.id) return;
+
+        // Delete user
+        await LdapUserRepository.delete(user.id);
     }
 
     private getCommandListeners(command: string) {

@@ -16,7 +16,7 @@ export default class NotificationService {
         this.ldap = ldap;
 
         // Run every 2.5 minutes
-        setInterval(this.test.bind(this), 1000 * 60);
+        setInterval(this.test.bind(this), 1000 * 60 * 2.5);
     }
 
     async test() {

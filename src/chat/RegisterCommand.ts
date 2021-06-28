@@ -61,7 +61,7 @@ export default class RegisterCommand {
             return;
         }
 
-        await message.reply(`Found LDAP user: ${ldapUser.toString()}`);
+        await message.reply(`Registered as user ${ldapUser.displayName} (${ldapUser.userPrincipalName}). I will send you a message before your password expires so you don't forget!`);
 
         // Save ldap user to DB
         const dbLdapUser = await LdapUserRepository.create({
